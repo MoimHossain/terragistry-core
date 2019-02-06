@@ -59,19 +59,24 @@ namespace Terragistry.Web
             string @namespace, string name, string provider, string version)
         {
             var hostUrl = $"{Request.Scheme}://{Request.Host}";
-            this.Response.Headers.Add("x-terraform-get", $"{hostUrl}/api/modules/{@namespace}/{name}/{provider}/{version}/zip");
+            this.Response.Headers.Add("x-terraform-get", $"{hostUrl}/api/modules/{@namespace}/{name}/{provider}/{version}/module_content.zip");
             return await Task.FromResult(new NoContentResult());
         }
 
         // Actual download
         [HttpGet]
-        [Route("{namespace}/{name}/{provider}/{version}/zip")]
+        [Route("{namespace}/{name}/{provider}/{version}/module_content.zip")]
         public async Task<IActionResult> GetModuleContentAsync(
             string @namespace, string name, string provider, string version)
         {
-            var hostUrl = $"{Request.Scheme}://{Request.Host}";
-            this.Response.Headers.Add("x-terraform-get", $"{hostUrl}/api/modules/{@namespace}/{name}/{provider}/{version}/zip");
-            return await Task.FromResult(new NoContentResult());
+            //var contentType = "application/octet-stream";
+            var contentType = "application/zip";
+            //var contentType = "application/x-gzip";
+
+            //var fileName = "app-service.tar.gz";
+            var fileName = "app-service.zip";
+
+            return await Task.FromResult(File(fileName, contentType, fileName));
         }
 
         private async Task<TerraModuleVersionCollection> ListAllVersionOfModuleAsync(
