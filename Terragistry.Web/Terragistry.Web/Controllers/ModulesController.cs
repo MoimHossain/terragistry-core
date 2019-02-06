@@ -145,7 +145,21 @@ namespace Terragistry.Web
 
         private async Task<TerraModuleCollection> ListAllModulesAsync()
         {
-            return await repository.GetAllModulesAsync();            
+            var result = await repository.GetAllModulesAsync();
+
+            var distinctList = new List<TerraModule>();
+
+            foreach(var m in result.Modules.OrderByDescending(m => m.Version))
+            {
+                if(!distinctList.Any(dm=> dm.Name == m.Name && dm.Provider == m.Provider && dm.Namespace == m.Namespace))
+                {
+                    distinctList.Add(m);
+                }
+            }
+
+            result.Modules = distinctList;
+
+            return result;
         }
     }
 }
