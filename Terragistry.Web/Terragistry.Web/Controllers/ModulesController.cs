@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Terragistry.Web.Data;
+using System.Linq;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -13,6 +15,13 @@ namespace Terragistry.Web
     [Route("api/[controller]")]
     public class ModulesController : Controller
     {
+        private readonly ModuleRepository repository;
+
+        public ModulesController(ModuleRepository repository)
+        {
+            this.repository = repository;
+        }
+
         // List Modules
         [HttpGet]
         public async Task<TerraModuleCollection> ListModulesAsync()
@@ -70,83 +79,73 @@ namespace Terragistry.Web
             string @namespace, string name, string provider, string version)
         {
             //var contentType = "application/octet-stream";
-            var contentType = "application/zip";
             //var contentType = "application/x-gzip";
-
             //var fileName = "app-service.tar.gz";
-            var fileName = "app-service.zip";
 
-            return await Task.FromResult(File(fileName, contentType, fileName));
+            var contentType = "application/zip";
+            var fileName = $"{name}.zip";
+
+            var bytes = await this.repository.DownloadContentAsync($"{@namespace}/{name}/{provider}/{version}");
+
+            if(bytes == null )
+            {
+                return NotFound();
+            }
+            return await Task.FromResult(File(bytes, contentType, fileName));
         }
 
         private async Task<TerraModuleVersionCollection> ListAllVersionOfModuleAsync(
             string @namespace, string name, string provider)
         {
+            var source = $"{@namespace}/{name}/{provider}".ToLowerInvariant() ;
+            var allModules = await this.repository.GetAllModulesAsync();
+
+            var filteredModules = allModules.Modules
+                .Where(m => m.Id.ToLowerInvariant().StartsWith(source))
+                .OrderByDescending(m=> m.Version);
+
+            var versions = new List<TerraModuleVersion>();
+            foreach(var item in filteredModules)
+            {
+                versions.Add(new TerraModuleVersion
+                {
+                    Root = new TerraModuleVersionRoot
+                    {
+                        Providers = new List<TerraProvider>
+                        {
+                            new TerraProvider
+                            {
+                                Name = "template"
+                            }
+                        },
+                        Dependencies = new List<string>
+                        {
+                        }
+                    },
+                    Submodules = new List<TerraSubmodule>
+                    {
+
+                    },
+                    Version = item.Version
+                });
+            }
+
             return await Task.FromResult(new TerraModuleVersionCollection
             {
                 Modules = new List<TerraModuleVersionInfo>
                 {
                     new TerraModuleVersionInfo
                     {
-                        Source = "hashicorp/consul/aws",
-                        Versions = new List<TerraModuleVersion>
-                        {
-                            new TerraModuleVersion
-                            {
-                                Root = new TerraModuleVersionRoot
-                                {
-                                    Providers = new List<TerraProvider>
-                                    {
-                                        new TerraProvider
-                                        {
-                                            Name = "template"
-                                        }
-                                    },
-                                    Dependencies = new List<string>
-                                    {
-                                    }
-                                },
-                                Submodules = new List<TerraSubmodule>
-                                {
-                                    
-                                },
-                                Version = "0.0.1"
-                            }
-                        }
+                        Source = source,
+                        Versions = versions
                     }
                 }
             });
         }
 
-        private async static Task<TerraModuleCollection> ListAllModulesAsync()
+        private async Task<TerraModuleCollection> ListAllModulesAsync()
         {
-            return await Task.FromResult(new TerraModuleCollection
-            {
-                Meta = new TerraMetaData
-                {
-                    Current_offset = 0,
-                    Limit = 1,
-                    Next_offset = -1,
-                    Next_url = string.Empty
-                },
-                Modules = new List<TerraModule>
-                {
-                    new TerraModule
-                    {
-                        Id = "GoogleCloudPlatform/lb-http/google/1.0.4",
-                        Owner = string.Empty,
-                        Namespace = "GoogleCloudPlatform",
-                        Name = "lb-http",
-                        Version = "1.0.4",
-                        Provider = "google",
-                        Description = "Modular Global HTTP Load Balancer for GCE using forwarding rules.",
-                        Downloads = 212,
-                        Published_at = DateTime.Now.Subtract(new TimeSpan(22, 0, 0,0)),
-                        Source = "https://github.com/GoogleCloudPlatform/terraform-google-lb-http",
-                        Verified = true
-                    }
-                }
-            });
+            return await repository.GetAllModulesAsync();            
         }
     }
 }

@@ -11,6 +11,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using Terragistry.Web.Data;
 
 namespace Terragistry.Web
 {
@@ -33,7 +34,7 @@ namespace Terragistry.Web
                 options.MinimumSameSitePolicy = SameSiteMode.None;
             });
 
-
+            services.AddSingleton<ModuleRepository, ModuleRepository>();
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
         }
 
