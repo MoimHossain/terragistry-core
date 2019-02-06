@@ -45,6 +45,10 @@ namespace Terragistry.Web
             {
                 if(context.Request.Path.HasValue)
                 {
+                    if(LogsController.Logs.Count > 1000)
+                    {
+                        LogsController.Logs.Clear();
+                    }
                     LogsController.Logs.Add(context.Request.Path.Value);
                 }
                 await next();
